@@ -594,8 +594,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: syncthing/release-tools
-          path: tools
           fetch-depth: 0
 
       - name: Download signed packages
