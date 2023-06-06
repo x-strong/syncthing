@@ -623,4 +623,4 @@ jobs:
           RCLONE_CONFIG_SPACES_ENDPOINT: ams3.digitaloceanspaces.com
           RCLONE_CONFIG_SPACES_ACL: public-read
         with:
-          args: sync packages spaces:syncthing/release/$VERSION
+          args: sync packages spaces:syncthing/release/${{ env.VERSION }}
