@@ -580,7 +580,7 @@ jobs:
           args: sync packages spaces:syncthing/nightly
 
   #
-  # Release builds
+  # Push release artifacts to Spaces
   #
 
   publish-release-files:
