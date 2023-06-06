@@ -592,6 +592,12 @@ jobs:
       - package-debian
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: syncthing/release-tools
+          path: tools
+          fetch-depth: 0
+
       - name: Download signed packages
         uses: actions/download-artifact@v3
         with:
@@ -609,7 +615,7 @@ jobs:
           version=$(go run build.go version)
           echo "VERSION=$version" >> $GITHUB_ENV
 
-      - name: Push signed packages
+      - name: Push to Spaces
         uses: docker://docker.io/rclone/rclone:latest
         env:
           RCLONE_CONFIG_SPACES_TYPE: s3
