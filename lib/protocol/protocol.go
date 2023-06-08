@@ -1105,7 +1105,6 @@ func lzma2Decompress(src []byte) ([]byte, error) {
 	for {
 		n, err := rd.Read(buf[offset:])
 		offset += n
-		l.Debugln("lzma2Decompress", offset, size, err)
 		if offset == size {
 			break
 		}
