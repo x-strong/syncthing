@@ -412,7 +412,7 @@ func (s *service) handleHellos(ctx context.Context) error {
 		// connections are limited.
 		rd, wr := s.limiter.getLimiters(remoteID, c, c.IsLocal())
 
-		protoConn := protocol.NewConnection(remoteID, rd, wr, c, s.model, c, deviceCfg.Compression, s.cfg.FolderPasswords(remoteID), s.keyGen)
+		protoConn := protocol.NewConnection(remoteID, rd, wr, c, s.model, c, deviceCfg.Compression, deviceCfg.CompressionAlgo, s.cfg.FolderPasswords(remoteID), s.keyGen)
 		go func() {
 			<-protoConn.Closed()
 			s.dialNowDevicesMut.Lock()

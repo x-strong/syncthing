@@ -12,6 +12,7 @@
 package protocol
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	lz4 "github.com/pierrec/lz4/v4"
+	"github.com/ulikunitz/xz/lzma"
 )
 
 const (
@@ -194,6 +196,7 @@ type rawConnection struct {
 	closeOnce             sync.Once
 	sendCloseOnce         sync.Once
 	compression           Compression
+	compressionAlgo       MessageCompression
 
 	loopWG sync.WaitGroup // Need to ensure no leftover routines in testing
 }
@@ -229,7 +232,7 @@ const (
 // Should not be modified in production code, just for testing.
 var CloseTimeout = 10 * time.Second
 
-func NewConnection(deviceID DeviceID, reader io.Reader, writer io.Writer, closer io.Closer, receiver Model, connInfo ConnectionInfo, compress Compression, passwords map[string]string, keyGen *KeyGenerator) Connection {
+func NewConnection(deviceID DeviceID, reader io.Reader, writer io.Writer, closer io.Closer, receiver Model, connInfo ConnectionInfo, compress Compression, compressionAlgo MessageCompression, passwords map[string]string, keyGen *KeyGenerator) Connection {
 	// Encryption / decryption is first (outermost) before conversion to
 	// native path formats.
 	nm := makeNative(receiver)
@@ -237,16 +240,18 @@ func NewConnection(deviceID DeviceID, reader io.Reader, writer io.Writer, closer
 
 	// We do the wire format conversion first (outermost) so that the
 	// metadata is in wire format when it reaches the encryption step.
-	rc := newRawConnection(deviceID, reader, writer, closer, em, connInfo, compress)
+	rc := newRawConnection(deviceID, reader, writer, closer, em, connInfo, compress, compressionAlgo)
 	ec := newEncryptedConnection(rc, rc, em.folderKeys, keyGen)
 	wc := wireFormatConnection{ec}
 
 	return wc
 }
 
-func newRawConnection(deviceID DeviceID, reader io.Reader, writer io.Writer, closer io.Closer, receiver Model, connInfo ConnectionInfo, compress Compression) *rawConnection {
+func newRawConnection(deviceID DeviceID, reader io.Reader, writer io.Writer, closer io.Closer, receiver Model, connInfo ConnectionInfo, compress Compression, compressionAlgo MessageCompression) *rawConnection {
 	cr := &countingReader{Reader: reader}
 	cw := &countingWriter{Writer: writer}
+
+	l.Infoln("Connection uses:", compress, compressionAlgo)
 
 	return &rawConnection{
 		ConnectionInfo:        connInfo,
@@ -263,6 +268,7 @@ func newRawConnection(deviceID DeviceID, reader io.Reader, writer io.Writer, clo
 		dispatcherLoopStopped: make(chan struct{}),
 		closed:                make(chan struct{}),
 		compression:           compress,
+		compressionAlgo:       compressionAlgo,
 		loopWG:                sync.WaitGroup{},
 	}
 }
@@ -529,6 +535,14 @@ func (c *rawConnection) readMessageAfterHeader(hdr Header, fourByteBuf []byte) (
 		}
 		buf = decomp
 
+	case MessageCompressionLZMA2:
+		decomp, err := lzma2Decompress(buf)
+		BufferPool.Put(buf)
+		if err != nil {
+			return nil, fmt.Errorf("decompressing message: %w", err)
+		}
+		buf = decomp
+
 	default:
 		return nil, fmt.Errorf("unknown message compression %d", hdr.Compression)
 	}
@@ -760,7 +774,7 @@ func (c *rawConnection) writeMessage(msg message) error {
 	}
 
 	if c.shouldCompressMessage(msg) {
-		ok, err := c.writeCompressedMessage(msg, buf[overhead:])
+		ok, err := c.writeCompressedMessage(msg, buf[overhead:], c.compressionAlgo)
 		if ok {
 			return err
 		}
@@ -788,10 +802,10 @@ func (c *rawConnection) writeMessage(msg message) error {
 //
 // The first return value indicates whether compression succeeded.
 // If not, the caller should retry without compression.
-func (c *rawConnection) writeCompressedMessage(msg message, marshaled []byte) (ok bool, err error) {
+func (c *rawConnection) writeCompressedMessage(msg message, marshaled []byte, comp MessageCompression) (ok bool, err error) {
 	hdr := Header{
 		Type:        typeOf(msg),
-		Compression: MessageCompressionLZ4,
+		Compression: comp,
 	}
 	hdrSize := hdr.ProtoSize()
 	if hdrSize > 1<<16-1 {
@@ -806,9 +820,16 @@ func (c *rawConnection) writeCompressedMessage(msg message, marshaled []byte) (o
 	buf := BufferPool.Get(maxCompressed)
 	defer BufferPool.Put(buf)
 
-	compressedSize, err := lz4Compress(marshaled, buf[cOverhead:])
+	var compressedSize int
+	switch comp {
+	case MessageCompressionLZ4:
+		compressedSize, err = lz4Compress(marshaled, buf[cOverhead:])
+	case MessageCompressionLZMA2:
+		compressedSize, err = lzma2Compress(marshaled, buf[cOverhead:])
+	}
 	totSize := compressedSize + cOverhead
 	if err != nil {
+		l.Debugf("compression failed: %v", err)
 		return false, nil
 	}
 
@@ -1025,6 +1046,39 @@ func lz4Compress(src, buf []byte) (int, error) {
 	return n + 4, nil
 }
 
+func lzma2Compress(src, buf []byte) (int, error) {
+	sw := &sliceWriter{buf: buf, offset: 4}
+	lw, err := lzma.NewWriter2(sw)
+	if err != nil {
+		return -1, err
+	}
+	if _, err := lw.Write(src); err != nil {
+		return -1, err
+	}
+	if err := lw.Flush(); err != nil {
+		return -1, err
+	}
+
+	// The compressed block is prefixed by the size of the uncompressed data.
+	binary.BigEndian.PutUint32(buf, uint32(len(src)))
+
+	return sw.offset, nil
+}
+
+type sliceWriter struct {
+	buf    []byte
+	offset int
+}
+
+func (w *sliceWriter) Write(p []byte) (int, error) {
+	if len(w.buf)-w.offset < len(p) {
+		return 0, io.ErrShortBuffer
+	}
+	copy(w.buf[w.offset:], p)
+	w.offset += len(p)
+	return len(p), nil
+}
+
 func lz4Decompress(src []byte) ([]byte, error) {
 	size := binary.BigEndian.Uint32(src)
 	buf := BufferPool.Get(int(size))
@@ -1036,6 +1090,32 @@ func lz4Decompress(src []byte) ([]byte, error) {
 	}
 
 	return buf[:n], nil
+}
+
+func lzma2Decompress(src []byte) ([]byte, error) {
+	size := int(binary.BigEndian.Uint32(src))
+	buf := BufferPool.Get(int(size))
+
+	rd, err := lzma.NewReader2(bytes.NewReader(src[4:]))
+	if err != nil {
+		return nil, err
+	}
+
+	offset := 0
+	for {
+		n, err := rd.Read(buf[offset:])
+		offset += n
+		l.Debugln("lzma2Decompress", offset, size, err)
+		if offset == size {
+			break
+		}
+		if err != nil {
+			BufferPool.Put(buf)
+			return nil, err
+		}
+	}
+
+	return buf[:offset], nil
 }
 
 func newProtocolError(err error, msgContext string) error {
