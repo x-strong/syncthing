@@ -1,5 +1,4 @@
 ARG GOVERSION=latest
-ARG TARGETARCH
 
 #
 # Maybe build Syncthing. This is a bit ugly as we can't make an entire
@@ -11,15 +10,18 @@ ARG TARGETARCH
 FROM golang:$GOVERSION AS builder
 ARG BUILD_USER
 ARG BUILD_HOST
+ARG TARGETARCH
 
 WORKDIR /src
 COPY . .
 
 ENV CGO_ENABLED=0
+RUN echo syncthing-linux-$TARGETARCH
 RUN if [ ! -f syncthing-linux-$TARGETARCH ] ; then \
+  echo syncthing-linux-$TARGETARCH ; \
   go run build.go -no-upgrade build syncthing ; \
-  fi && \
-  mv syncthing syncthing-linux-$TARGETARCH
+  mv syncthing syncthing-linux-$TARGETARCH ; \
+  fi
 
 #
 # The rest of the Dockerfile uses the binary from the builder, prebuilt or
@@ -27,6 +29,7 @@ RUN if [ ! -f syncthing-linux-$TARGETARCH ] ; then \
 #
 
 FROM alpine
+ARG TARGETARCH
 
 EXPOSE 8384 22000/tcp 22000/udp 21027/udp
 
