@@ -1,13 +1,30 @@
 ARG GOVERSION=latest
+ARG TARGETARCH
+
+#
+# Maybe build Syncthing. This is a bit ugly as we can't make an entire
+# section of the Dockerfile conditional, so we end up always pulling the
+# golang image as builder. Then we check if the executable we need already
+# exists (pre-built) otherwise we build it.
+#
+
 FROM golang:$GOVERSION AS builder
+ARG BUILD_USER
+ARG BUILD_HOST
 
 WORKDIR /src
 COPY . .
 
 ENV CGO_ENABLED=0
-ENV BUILD_HOST=syncthing.net
-ENV BUILD_USER=docker
-RUN rm -f syncthing && go run build.go -no-upgrade build syncthing
+RUN if [ ! -f syncthing-linux-$TARGETARCH ] ; then \
+  go run build.go -no-upgrade build syncthing ; \
+  fi && \
+  mv syncthing syncthing-linux-$TARGETARCH
+
+#
+# The rest of the Dockerfile uses the binary from the builder, prebuilt or
+# not.
+#
 
 FROM alpine
 
@@ -17,7 +34,7 @@ VOLUME ["/var/syncthing"]
 
 RUN apk add --no-cache ca-certificates curl libcap su-exec tzdata
 
-COPY --from=builder /src/syncthing /bin/syncthing
+COPY --from=builder /src/syncthing-linux-$TARGETARCH /bin/syncthing
 COPY --from=builder /src/script/docker-entrypoint.sh /bin/entrypoint.sh
 
 ENV PUID=1000 PGID=1000 HOME=/var/syncthing
