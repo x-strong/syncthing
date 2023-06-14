@@ -673,7 +673,7 @@ jobs:
             echo Release version, pushing to :latest and version tags
             major=${version%.*.*}
             minor=${version%.*}
-            tags=syncthing/syncthing:$version,syncthing/syncthing:$major,syncthing/syncthing:$minor,syncthing/syncthing:latest )
+            tags=syncthing/syncthing:$version,syncthing/syncthing:$major,syncthing/syncthing:$minor,syncthing/syncthing:latest
           elif [[ $version == *-rc.@([0-9]|[0-9][0-9]) ]] ; then
             echo Release candidate, pushing to :rc
             tags=syncthing/syncthing:rc
