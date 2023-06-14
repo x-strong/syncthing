@@ -18,7 +18,6 @@ COPY . .
 ENV CGO_ENABLED=0
 RUN echo syncthing-linux-$TARGETARCH
 RUN if [ ! -f syncthing-linux-$TARGETARCH ] ; then \
-  echo syncthing-linux-$TARGETARCH ; \
   go run build.go -no-upgrade build syncthing ; \
   mv syncthing syncthing-linux-$TARGETARCH ; \
   fi
