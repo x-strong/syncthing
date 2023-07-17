@@ -40,6 +40,19 @@ func (cfg *DeviceConfiguration) prepare(sharedFolders []string) {
 	if cfg.CompressionAlgo == protocol.MessageCompressionNone {
 		cfg.CompressionAlgo = protocol.MessageCompressionLZ4
 	}
+
+	// A device cannot be simultaneously untrusted and an introducer, nor
+	// auto accept folders.
+	if cfg.Untrusted {
+		if cfg.Introducer {
+			l.Warnf("Device %s (%s) is both untrusted and an introducer, removing introducer flag", cfg.DeviceID.Short(), cfg.Name)
+			cfg.Introducer = false
+		}
+		if cfg.AutoAcceptFolders {
+			l.Warnf("Device %s (%s) is both untrusted and auto-accepting folders, removing auto-accept flag", cfg.DeviceID.Short(), cfg.Name)
+			cfg.AutoAcceptFolders = false
+		}
+	}
 }
 
 func (cfg *DeviceConfiguration) IgnoredFolder(folder string) bool {
