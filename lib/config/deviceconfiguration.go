@@ -9,6 +9,8 @@ package config
 import (
 	"fmt"
 	"sort"
+
+	"github.com/syncthing/syncthing/lib/protocol"
 )
 
 func (cfg DeviceConfiguration) Copy() DeviceConfiguration {
@@ -34,6 +36,10 @@ func (cfg *DeviceConfiguration) prepare(sharedFolders []string) {
 	}
 
 	cfg.IgnoredFolders = sortedObservedFolderSlice(ignoredFolders)
+
+	if cfg.CompressionAlgo == protocol.MessageCompressionNone {
+		cfg.CompressionAlgo = protocol.MessageCompressionLZ4
+	}
 
 	// A device cannot be simultaneously untrusted and an introducer, nor
 	// auto accept folders.

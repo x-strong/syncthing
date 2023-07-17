@@ -32,8 +32,9 @@ enum MessageType {
 }
 
 enum MessageCompression {
-    MESSAGE_COMPRESSION_NONE = 0;
-    MESSAGE_COMPRESSION_LZ4  = 1 [(ext.enumgoname) = "MessageCompressionLZ4"];
+    MESSAGE_COMPRESSION_NONE  = 0;
+    MESSAGE_COMPRESSION_LZ4   = 1 [(ext.enumgoname) = "MessageCompressionLZ4"];
+    MESSAGE_COMPRESSION_LZMA2 = 2 [(ext.enumgoname) = "MessageCompressionLZMA2"];
 }
 
 // --- Actual messages ---
