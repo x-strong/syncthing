@@ -320,21 +320,11 @@ func TestCopyRange(tttt *testing.T) {
 								t.Fatal(err)
 							}
 
-							srcBasic, ok := src.(basicFile)
-							if !ok {
-								if srcMetric, isMetr := src.(*metricsFile); isMetr {
-									srcBasic, ok = srcMetric.next.(basicFile)
-								}
-							}
+							srcBasic, ok := unwrap(src).(basicFile)
 							if !ok {
 								t.Fatal("src file is not a basic file")
 							}
-							dstBasic, ok := dst.(basicFile)
-							if !ok {
-								if dstMetric, isMetr := src.(*metricsFile); isMetr {
-									dstBasic, ok = dstMetric.next.(basicFile)
-								}
-							}
+							dstBasic, ok := unwrap(dst).(basicFile)
 							if !ok {
 								t.Fatal("dst file is not a basic file")
 							}
