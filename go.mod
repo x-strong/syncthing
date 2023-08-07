@@ -42,7 +42,7 @@ require (
 	github.com/quic-go/quic-go v0.34.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/sasha-s/go-deadlock v0.3.1
-	github.com/shirou/gopsutil/v3 v3.23.6
+	github.com/shirou/gopsutil/v3 v3.23.7
 	github.com/syncthing/notify v0.0.0-20210616190510-c6b7342338d2
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d
 	github.com/thejerf/suture/v4 v4.0.2
@@ -57,6 +57,8 @@ require (
 	golang.org/x/tools v0.11.0
 	google.golang.org/protobuf v1.31.0
 )
+
+require golang.org/x/exp v0.0.0-20230711023510-fffb14384f22
 
 require (
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
@@ -76,7 +78,6 @@ require (
 	github.com/quic-go/qtls-go1-20 v0.2.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	golang.org/x/exp v0.0.0-20230711023510-fffb14384f22 // indirect
 )
 
 // https://github.com/gobwas/glob/pull/55
