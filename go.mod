@@ -22,7 +22,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/greatroar/blobloom v0.7.2
-	github.com/hashicorp/golang-lru/v2 v2.0.4
+	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/jackpal/gateway v1.0.10
 	github.com/jackpal/go-nat-pmp v1.0.2
 	github.com/julienschmidt/httprouter v1.3.0
@@ -58,6 +58,8 @@ require (
 	google.golang.org/protobuf v1.31.0
 )
 
+require golang.org/x/exp v0.0.0-20230711023510-fffb14384f22
+
 require (
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -76,7 +78,6 @@ require (
 	github.com/quic-go/qtls-go1-20 v0.2.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	golang.org/x/exp v0.0.0-20230711023510-fffb14384f22 // indirect
 )
 
 // https://github.com/gobwas/glob/pull/55
